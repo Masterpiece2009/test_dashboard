@@ -36,7 +36,22 @@
 
 /* ═══════════════════════ RESET ═══════════════════════ */
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{
+
+/*
+  RTL scrollbar fix:
+  In RTL documents browsers put the scrollbar on the LEFT, which
+  creates unequal visual margins.  We set html to ltr so the
+  scrollbar sits on the right, then restore rtl on body for content.
+  scrollbar-gutter:stable reserves the same width on both sides
+  even when the scrollbar is absent, so spacing is always symmetric.
+*/
+html{
+  direction:ltr;
+  overflow-y:scroll;
+  scrollbar-gutter:stable;
+}
+body{
+  direction:rtl;
   min-height:100%;
   font-family:'Tajawal',sans-serif;
   color:var(--t1);
@@ -45,12 +60,18 @@ html,body{
     radial-gradient(ellipse 1000px 600px at -5% -5%,rgba(6,182,212,.055),transparent 55%),
     radial-gradient(ellipse 700px 700px at 105% 110%,rgba(139,92,246,.04),transparent 55%);
 }
-::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(6,182,212,.25);border-radius:4px}
+::-webkit-scrollbar-thumb{background:rgba(6,182,212,.28);border-radius:4px}
 
 /* ═══════════════════════ LAYOUT ═══════════════════════ */
-.app{max-width:1620px;margin:0 auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+/* Symmetric 24px padding on both sides — no more unequal gaps */
+.app{
+  max-width:1640px;
+  margin:0 auto;
+  padding:20px 24px;
+  display:flex;flex-direction:column;gap:16px;
+}
 
 /* ═══════════════════════ LOADING SCREEN ═══════════════════════ */
 #loadScreen{
@@ -72,7 +93,7 @@ html,body{
 /* ═══════════════════════ HEADER ═══════════════════════ */
 header{
   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  padding:14px 20px;
+  padding:14px 18px;
   background:linear-gradient(135deg,rgba(6,182,212,.05),rgba(139,92,246,.03));
   border:1px solid var(--borderHi);border-radius:14px;
   position:relative;overflow:hidden;
