@@ -3,486 +3,617 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>لوحة تحكم نواقص المخازن</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet"/>
+<title>نواقص المخزن — لوحة التحكم</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 <style>
-/* ═══════════════════════ TOKENS ═══════════════════════ */
-:root{
-  --bg:       #04090f;
-  --bg2:      #060d17;
-  --card:     #080f1a;
-  --card2:    #0a1322;
-  --border:   rgba(6,182,212,.09);
-  --borderHi: rgba(6,182,212,.25);
-  --cyan:     #06b6d4;
-  --cyan15:   rgba(6,182,212,.15);
-  --cyan06:   rgba(6,182,212,.06);
-  --purple:   #8b5cf6;
-  --pur15:    rgba(139,92,246,.15);
-  --amber:    #f59e0b;
-  --amb15:    rgba(245,158,11,.15);
-  --red:      #ef4444;
-  --red15:    rgba(239,68,68,.15);
-  --green:    #10b981;
-  --grn15:    rgba(16,185,129,.15);
-  --pink:     #ec4899;
-  --pnk15:    rgba(236,72,153,.15);
-  --t1:       #e2f0fa;
-  --t2:       #7a97b0;
-  --t3:       #3d5568;
+/* ══════════════════════════════════════
+   DESIGN TOKENS
+══════════════════════════════════════ */
+:root {
+  --bg:         #050b14;
+  --bg2:        #070f1d;
+  --surface:    #0a1628;
+  --surface2:   #0d1d35;
+  --border:     rgba(96,165,250,.08);
+  --borderHi:   rgba(96,165,250,.18);
+  --blue:       #3b82f6;
+  --blue-lo:    rgba(59,130,246,.12);
+  --blue-glow:  rgba(59,130,246,.22);
+  --teal:       #2dd4bf;
+  --teal-lo:    rgba(45,212,191,.12);
+  --amber:      #fbbf24;
+  --amb-lo:     rgba(251,191,36,.12);
+  --rose:       #f43f5e;
+  --rose-lo:    rgba(244,63,94,.12);
+  --violet:     #a78bfa;
+  --vio-lo:     rgba(167,139,250,.12);
+  --emerald:    #34d399;
+  --emer-lo:    rgba(52,211,153,.12);
+  --t1:         #e4eeff;
+  --t2:         #6b8ab5;
+  --t3:         #2e4a6b;
+  --mono:       'JetBrains Mono', monospace;
 }
 
-/* ═══════════════════════ RESET ═══════════════════════ */
-*{box-sizing:border-box;margin:0;padding:0}
-html,body{
-  min-height:100%;
-  font-family:'Tajawal',sans-serif;
-  color:var(--t1);
-  background:var(--bg);
-  background-image:
-    radial-gradient(ellipse 1000px 600px at -5% -5%,rgba(6,182,212,.055),transparent 55%),
-    radial-gradient(ellipse 700px 700px at 105% 110%,rgba(139,92,246,.04),transparent 55%);
+/* ══════════════════════════════════════
+   RESET & BASE
+══════════════════════════════════════ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  min-height: 100%;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  color: var(--t1);
+  background: var(--bg);
+  overflow-x: hidden;
 }
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(6,182,212,.25);border-radius:4px}
+body::before {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 900px 700px at -10% -15%, rgba(59,130,246,.045) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 600px at 110% 110%, rgba(45,212,191,.03) 0%, transparent 55%);
+}
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,.4); }
 
-/* ═══════════════════════ LAYOUT ═══════════════════════ */
-.app{max-width:1620px;margin:0 auto;padding:18px 20px;display:flex;flex-direction:column;gap:16px}
+/* ══════════════════════════════════════
+   LOADING
+══════════════════════════════════════ */
+#loadScreen {
+  position: fixed; inset: 0; z-index: 999;
+  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  transition: opacity .5s ease;
+}
+#loadScreen.hide { opacity: 0; pointer-events: none; }
+.load-ring {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  border: 2px solid rgba(59,130,246,.1);
+  border-top-color: var(--blue);
+  border-right-color: var(--teal);
+  animation: spin .9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.load-text { color: var(--t2); font-size: 13px; letter-spacing: .5px; }
+.load-brand { font-size: 22px; font-weight: 700; color: var(--blue); letter-spacing: 1px; }
 
-/* ═══════════════════════ LOADING SCREEN ═══════════════════════ */
-#loadScreen{
-  position:fixed;inset:0;z-index:999;
-  background:var(--bg);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
-  transition:opacity .4s;
+/* ══════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════ */
+.app {
+  position: relative; z-index: 1;
+  max-width: 1720px; margin: 0 auto;
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 14px;
+  opacity: 0; transition: opacity .5s ease;
 }
-#loadScreen.hide{opacity:0;pointer-events:none}
-.spinner{
-  width:52px;height:52px;border-radius:50%;
-  border:3px solid rgba(6,182,212,.15);
-  border-top-color:var(--cyan);
-  animation:spin .8s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg)}}
-.load-label{color:var(--t2);font-size:14px}
+.app.visible { opacity: 1; }
 
-/* ═══════════════════════ HEADER ═══════════════════════ */
-header{
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
-  padding:14px 20px;
-  background:linear-gradient(135deg,rgba(6,182,212,.05),rgba(139,92,246,.03));
-  border:1px solid var(--borderHi);border-radius:14px;
-  position:relative;overflow:hidden;
+/* ══════════════════════════════════════
+   HEADER
+══════════════════════════════════════ */
+.hdr {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--borderHi);
+  border-radius: 14px;
+  position: relative; overflow: hidden;
 }
-header::after{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background:repeating-linear-gradient(90deg,transparent,transparent 80px,rgba(6,182,212,.012) 80px,rgba(6,182,212,.012) 81px);
+.hdr::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent 5%, rgba(59,130,246,.4) 40%, rgba(45,212,191,.3) 70%, transparent 95%);
 }
-.hd-brand{display:flex;align-items:center;gap:14px}
-.hd-logo{
-  width:48px;height:48px;border-radius:11px;flex-shrink:0;
-  background:linear-gradient(135deg,var(--cyan),var(--purple));
-  display:flex;align-items:center;justify-content:center;
-  font-size:20px;font-weight:900;color:#fff;
-  box-shadow:0 0 20px rgba(6,182,212,.3);
+.hdr-brand { display: flex; align-items: center; gap: 14px; }
+.hdr-icon {
+  width: 46px; height: 46px; border-radius: 12px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--blue), var(--teal));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 900; color: #fff;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 4px 20px rgba(59,130,246,.3);
 }
-.hd-title{font-size:18px;font-weight:800;line-height:1.2}
-.hd-sub{font-size:12px;color:var(--t2);margin-top:3px}
-.hd-live{
-  display:inline-flex;align-items:center;gap:6px;margin-top:4px;
-  background:var(--grn15);border:1px solid rgba(16,185,129,.25);
-  color:var(--green);padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;
+.hdr-title { font-size: 17px; font-weight: 700; color: var(--t1); }
+.hdr-meta { font-size: 11.5px; color: var(--t2); margin-top: 3px; }
+.live-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px; border-radius: 12px;
+  background: var(--emer-lo); border: 1px solid rgba(52,211,153,.2);
+  color: var(--emerald); font-size: 10.5px; font-weight: 600; margin-top: 4px;
 }
-.hd-live::before{
-  content:'';width:6px;height:6px;border-radius:50%;background:var(--green);
-  animation:beat 2s ease infinite;
+.live-chip::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--emerald); animation: pulse 2s ease infinite;
 }
-@keyframes beat{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.5);opacity:.6}}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.6)} }
+.hdr-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sync-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 8px;
+  background: rgba(255,255,255,.02); border: 1px solid var(--border);
+  color: var(--t2); font-size: 11.5px;
+}
+.sync-chip i { color: var(--emerald); font-size: 10px; }
 
-.hd-actions{display:flex;gap:8px;flex-wrap:wrap}
-.btn{
-  display:inline-flex;align-items:center;gap:7px;
-  padding:8px 14px;border-radius:9px;
-  border:1px solid var(--borderHi);
-  background:rgba(255,255,255,.02);
-  color:var(--t2);cursor:pointer;
-  font-family:'Tajawal',sans-serif;font-size:13px;font-weight:600;
-  transition:all .18s;white-space:nowrap;
+/* ══════════════════════════════════════
+   BUTTONS
+══════════════════════════════════════ */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px; border-radius: 8px;
+  border: 1px solid var(--borderHi);
+  background: rgba(255,255,255,.025);
+  color: var(--t2); cursor: pointer;
+  font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 12.5px; font-weight: 500;
+  transition: all .18s; white-space: nowrap;
 }
-.btn:hover{background:var(--cyan15);color:var(--cyan);border-color:var(--cyan)}
-.btn:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
-.btn.cta{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#fff;border:none;box-shadow:0 6px 18px rgba(6,182,212,.25)}
-.btn.cta:hover{transform:translateY(-1px);box-shadow:0 8px 26px rgba(6,182,212,.35)}
-.btn i{font-size:12px}
-
-/* last-sync chip */
-#syncChip{
-  display:flex;align-items:center;gap:6px;
-  padding:5px 12px;border-radius:8px;
-  background:rgba(255,255,255,.02);border:1px solid var(--border);
-  color:var(--t2);font-size:12px;
+.btn:hover { background: var(--blue-lo); color: var(--blue); border-color: var(--blue); }
+.btn:disabled { opacity: .4; cursor: not-allowed; pointer-events: none; }
+.btn.primary {
+  background: var(--blue); color: #fff; border-color: var(--blue);
+  box-shadow: 0 4px 16px rgba(59,130,246,.25);
 }
-#syncChip i{color:var(--green);font-size:11px}
+.btn.primary:hover { background: #2563eb; box-shadow: 0 6px 22px rgba(59,130,246,.35); transform: translateY(-1px); }
+.btn i { font-size: 11.5px; }
 
-/* ═══════════════════════ ERROR BANNER ═══════════════════════ */
-#errorBanner{
-  display:none;align-items:center;gap:10px;
-  padding:12px 16px;border-radius:10px;
-  background:var(--red15);border:1px solid rgba(239,68,68,.25);
-  color:#fca5a5;font-size:13px;
+/* ══════════════════════════════════════
+   ERROR BANNER
+══════════════════════════════════════ */
+.err-banner {
+  display: none; align-items: center; gap: 10px;
+  padding: 11px 15px; border-radius: 10px;
+  background: var(--rose-lo); border: 1px solid rgba(244,63,94,.2);
+  color: #fca5a5; font-size: 13px;
 }
-#errorBanner.show{display:flex}
-#errorBanner i{font-size:16px;flex-shrink:0}
+.err-banner.show { display: flex; }
+.err-banner i { flex-shrink: 0; }
 
-/* ═══════════════════════ KPI ROW ═══════════════════════ */
-.kpi-row{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
-.kpi{
-  padding:15px 16px;border-radius:12px;
-  background:var(--card);border:1px solid var(--border);
-  position:relative;overflow:hidden;cursor:default;
-  transition:transform .2s,box-shadow .2s;
+/* ══════════════════════════════════════
+   KPI ROW
+══════════════════════════════════════ */
+.kpi-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+.kpi {
+  padding: 14px 15px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  position: relative; overflow: hidden; cursor: default;
+  transition: transform .2s, border-color .2s, box-shadow .2s;
 }
-.kpi:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.45)}
-.kpi-icon{
-  width:34px;height:34px;border-radius:8px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:14px;margin-bottom:9px;
+.kpi:hover { transform: translateY(-3px); border-color: var(--borderHi); box-shadow: 0 8px 30px rgba(0,0,0,.4); }
+.kpi-glow {
+  position: absolute; top: -20px; right: -20px;
+  width: 80px; height: 80px; border-radius: 50%;
+  filter: blur(28px); opacity: .15; pointer-events: none;
 }
-.kpi-val{font-size:28px;font-weight:900;line-height:1;margin-bottom:4px;font-variant-numeric:tabular-nums}
-.kpi-lbl{font-size:11.5px;color:var(--t2);font-weight:500}
-.kpi-sub{font-size:11px;margin-top:6px;font-weight:600}
-/* colors */
-.kpi.cy .kpi-icon{background:var(--cyan15);color:var(--cyan)} .kpi.cy .kpi-val{color:var(--cyan)}
-.kpi.pu .kpi-icon{background:var(--pur15);color:var(--purple)} .kpi.pu .kpi-val{color:var(--purple)}
-.kpi.am .kpi-icon{background:var(--amb15);color:var(--amber)} .kpi.am .kpi-val{color:var(--amber)}
-.kpi.rd .kpi-icon{background:var(--red15);color:var(--red)} .kpi.rd .kpi-val{color:var(--red)}
-.kpi.gn .kpi-icon{background:var(--grn15);color:var(--green)} .kpi.gn .kpi-val{color:var(--green)}
-.kpi.pk .kpi-icon{background:var(--pnk15);color:var(--pink)} .kpi.pk .kpi-val{color:var(--pink)}
-.kpi-glow{position:absolute;top:-18px;right:-18px;width:70px;height:70px;border-radius:50%;filter:blur(24px);opacity:.18;pointer-events:none}
-
-/* ═══════════════════════ MAIN 2-COLUMN GRID ═══════════════════════ */
-.main-grid{display:grid;grid-template-columns:320px 1fr;gap:14px;align-items:start}
-
-/* ═══════════════════════ CARD ═══════════════════════ */
-.card{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:13px;padding:16px;
-  position:relative;overflow:hidden;
+.kpi-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.kpi-badge {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; font-size: 13px;
 }
-.card::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:1px;
-  background:linear-gradient(90deg,transparent 10%,rgba(6,182,212,.28),transparent 90%);
+.kpi-trend { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 5px; }
+.kpi-val { font-size: 30px; font-weight: 700; line-height: 1; margin-bottom: 5px; font-variant-numeric: tabular-nums; }
+.kpi-lbl { font-size: 11px; color: var(--t2); font-weight: 400; }
+
+/* per-color variants */
+.kpi.blue  .kpi-badge { background: var(--blue-lo); color: var(--blue); }
+.kpi.blue  .kpi-val   { color: var(--blue); }
+.kpi.teal  .kpi-badge { background: var(--teal-lo); color: var(--teal); }
+.kpi.teal  .kpi-val   { color: var(--teal); }
+.kpi.amber .kpi-badge { background: var(--amb-lo); color: var(--amber); }
+.kpi.amber .kpi-val   { color: var(--amber); }
+.kpi.rose  .kpi-badge { background: var(--rose-lo); color: var(--rose); }
+.kpi.rose  .kpi-val   { color: var(--rose); }
+.kpi.vio   .kpi-badge { background: var(--vio-lo); color: var(--violet); }
+.kpi.vio   .kpi-val   { color: var(--violet); }
+.kpi.emer  .kpi-badge { background: var(--emer-lo); color: var(--emerald); }
+.kpi.emer  .kpi-val   { color: var(--emerald); }
+
+/* ══════════════════════════════════════
+   MAIN GRID
+══════════════════════════════════════ */
+.main-grid { display: grid; grid-template-columns: 300px 1fr; gap: 12px; align-items: start; }
+
+/* ══════════════════════════════════════
+   CARD
+══════════════════════════════════════ */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 13px; padding: 16px;
+  position: relative; overflow: hidden;
 }
-.ct{font-size:13px;font-weight:700;color:var(--t1);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-.ct i{color:var(--cyan);font-size:12px}
-.ct-sub{font-size:11px;color:var(--t2);margin-inline-start:auto;font-weight:400}
-
-/* ═══════════════════════ CHARTS ═══════════════════════ */
-.ch240{height:240px}.ch200{height:200px}.ch170{height:170px}.ch150{height:150px}
-
-/* ═══════════════════════ LEGEND ═══════════════════════ */
-.legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.leg-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--t2)}
-.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0}
-
-/* ═══════════════════════ PROGRESS BARS ═══════════════════════ */
-.pb-list{display:flex;flex-direction:column;gap:9px;margin-top:4px}
-.pb-row{}
-.pb-head{display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px}
-.pb-name{color:var(--t2);max-width:190px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pb-count{color:var(--t1);font-weight:700}
-.pb-track{height:5px;border-radius:3px;background:rgba(255,255,255,.05);overflow:hidden}
-.pb-fill{height:100%;border-radius:3px;transition:width .7s ease}
-
-/* ═══════════════════════ RIGHT COL ═══════════════════════ */
-.right-col{display:flex;flex-direction:column;gap:14px}
-.chart-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-
-/* ═══════════════════════ TABLE ═══════════════════════ */
-.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px}
-.toolbar-l{display:flex;gap:8px;flex-wrap:wrap}
-.inp-wrap{position:relative;display:flex;align-items:center}
-.inp-wrap .icon{position:absolute;right:10px;color:var(--t3);font-size:11px;pointer-events:none}
-input.srch,select.flt{
-  padding:7px 30px 7px 11px;
-  background:rgba(255,255,255,.025);border:1px solid var(--borderHi);
-  border-radius:8px;color:var(--t2);
-  font-family:'Tajawal',sans-serif;font-size:13px;outline:none;
-  transition:border-color .18s;
+.card-title {
+  font-size: 12.5px; font-weight: 600; color: var(--t1);
+  display: flex; align-items: center; gap: 7px; margin-bottom: 13px;
 }
-input.srch{width:200px}
-select.flt{cursor:pointer;appearance:none;min-width:130px}
-input.srch:focus,select.flt:focus{border-color:var(--cyan);color:var(--t1)}
-.badge{
-  background:var(--cyan15);color:var(--cyan);
-  padding:4px 10px;border-radius:6px;font-size:12px;font-weight:700;white-space:nowrap;
+.card-title i { color: var(--blue); font-size: 11.5px; }
+.card-title .ct-badge {
+  margin-inline-start: auto;
+  font-size: 10px; font-weight: 600; color: var(--t2);
+  background: rgba(255,255,255,.04); padding: 2px 7px; border-radius: 5px;
+}
+.ch260 { height: 260px; }
+.ch210 { height: 210px; }
+.ch180 { height: 180px; }
+
+/* ══════════════════════════════════════
+   LEGEND
+══════════════════════════════════════ */
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.leg-i { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--t2); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* ══════════════════════════════════════
+   PROGRESS BARS
+══════════════════════════════════════ */
+.pb-list { display: flex; flex-direction: column; gap: 10px; margin-top: 2px; }
+.pb-hd { display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; margin-bottom: 4px; }
+.pb-name { color: var(--t2); max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pb-count { font-weight: 700; color: var(--t1); font-variant-numeric: tabular-nums; }
+.pb-track { height: 4px; border-radius: 4px; background: rgba(255,255,255,.04); overflow: hidden; }
+.pb-fill { height: 100%; border-radius: 4px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+
+/* ══════════════════════════════════════
+   RIGHT COLUMN
+══════════════════════════════════════ */
+.right-col { display: flex; flex-direction: column; gap: 12px; }
+.chart-trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+
+/* ══════════════════════════════════════
+   TABLE
+══════════════════════════════════════ */
+.toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.toolbar-l { display: flex; gap: 7px; flex-wrap: wrap; }
+.inp-wrap { position: relative; display: flex; align-items: center; }
+.inp-icon { position: absolute; right: 10px; color: var(--t3); font-size: 10.5px; pointer-events: none; }
+input.srch, select.flt {
+  padding: 7px 30px 7px 10px;
+  background: rgba(255,255,255,.025); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--t2);
+  font-family: 'IBM Plex Sans Arabic', sans-serif; font-size: 12.5px;
+  outline: none; transition: border-color .18s, color .18s;
+}
+input.srch { width: 190px; }
+select.flt { cursor: pointer; appearance: none; min-width: 130px; }
+input.srch:focus, select.flt:focus { border-color: var(--blue); color: var(--t1); }
+input.srch::placeholder { color: var(--t3); }
+.count-badge {
+  background: var(--blue-lo); color: var(--blue);
+  border: 1px solid rgba(59,130,246,.18);
+  padding: 4px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap;
 }
 
-/* scroll wrapper */
-.tbl-wrap{overflow:auto;max-height:580px;border-radius:9px;border:1px solid var(--border)}
-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px}
-thead th{
-  position:sticky;top:0;z-index:5;
-  background:#0c1b2e;color:var(--t1);
-  font-weight:700;padding:10px 11px;text-align:right;
-  border-bottom:1px solid var(--borderHi);
-  white-space:nowrap;cursor:pointer;user-select:none;
-  transition:background .15s;
+.tbl-wrap { overflow: auto; max-height: 560px; border-radius: 9px; border: 1px solid var(--border); }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 1000px; }
+thead th {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--surface2); color: var(--t2);
+  font-weight: 600; padding: 10px 11px; text-align: right;
+  border-bottom: 1px solid var(--borderHi);
+  white-space: nowrap; cursor: pointer; user-select: none;
+  transition: color .15s, background .15s;
+  font-size: 11.5px;
 }
-thead th:hover{background:#0f2340}
-thead th.sorted{color:var(--cyan)}
-.sa{color:var(--t3);margin-inline-start:4px;font-size:10px}
-.sorted .sa{color:var(--cyan)}
-tbody tr{transition:background .13s}
-tbody tr:hover td{background:rgba(6,182,212,.035)}
-tbody td{padding:8px 11px;border-bottom:1px solid rgba(255,255,255,.025);color:var(--t1);vertical-align:middle}
-tbody tr:last-child td{border-bottom:none}
+thead th:hover { color: var(--t1); background: rgba(59,130,246,.05); }
+thead th.sorted { color: var(--blue); }
+.sort-arrow { color: var(--t3); margin-inline-start: 4px; font-size: 9px; }
+.sorted .sort-arrow { color: var(--blue); }
+tbody tr { transition: background .12s; }
+tbody tr:hover td { background: rgba(59,130,246,.03); }
+tbody td {
+  padding: 9px 11px; border-bottom: 1px solid rgba(255,255,255,.02);
+  color: var(--t1); vertical-align: middle;
+}
+tbody tr:last-child td { border-bottom: none; }
 
 /* PILLS */
-.pill{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;white-space:nowrap}
-.p-cy{background:var(--cyan15);color:var(--cyan)}
-.p-am{background:var(--amb15);color:var(--amber)}
-.p-rd{background:var(--red15);color:var(--red)}
-.p-gn{background:var(--grn15);color:var(--green)}
-.p-pu{background:var(--pur15);color:var(--purple)}
-.p-pk{background:var(--pnk15);color:var(--pink)}
-.p-gr{background:rgba(255,255,255,.04);color:var(--t2)}
-
-/* ═══════════════════════ PAGINATION ═══════════════════════ */
-.pager{display:flex;align-items:center;justify-content:space-between;padding-top:11px;flex-wrap:wrap;gap:8px}
-.pg-info{font-size:12px;color:var(--t2)}
-.pg-btns{display:flex;gap:5px}
-.pg-btn{
-  width:30px;height:30px;border-radius:7px;border:1px solid var(--borderHi);
-  background:rgba(255,255,255,.02);color:var(--t2);
-  cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;
-  transition:all .13s;font-family:'Tajawal',sans-serif;
+.pill {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 3px 8px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
 }
-.pg-btn:hover{background:var(--cyan15);color:var(--cyan);border-color:var(--cyan)}
-.pg-btn.active{background:var(--cyan);color:#fff;border-color:var(--cyan);font-weight:700}
-.pg-btn:disabled{opacity:.3;cursor:not-allowed}
+.p-blue  { background: var(--blue-lo);  color: var(--blue); }
+.p-teal  { background: var(--teal-lo);  color: var(--teal); }
+.p-amber { background: var(--amb-lo);   color: var(--amber); }
+.p-rose  { background: var(--rose-lo);  color: var(--rose); }
+.p-vio   { background: var(--vio-lo);   color: var(--violet); }
+.p-emer  { background: var(--emer-lo);  color: var(--emerald); }
+.p-gray  { background: rgba(255,255,255,.04); color: var(--t2); }
 
-/* ═══════════════════════ DETAIL MODAL ═══════════════════════ */
-.overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:200;
-  display:none;align-items:center;justify-content:center;padding:20px;
-}
-.overlay.open{display:flex}
-.modal{
-  background:#091626;border:1px solid var(--borderHi);border-radius:15px;
-  padding:24px;width:min(620px,96vw);max-height:90vh;overflow-y:auto;
-  position:relative;animation:popIn .22s ease;
-}
-@keyframes popIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
-.modal-x{
-  position:absolute;top:12px;left:14px;
-  background:var(--red15);border:1px solid rgba(239,68,68,.25);
-  color:var(--red);border-radius:7px;padding:5px 10px;
-  cursor:pointer;font-family:'Tajawal',sans-serif;font-size:12px;font-weight:700;
-}
-.modal-x:hover{background:var(--red);color:#fff}
-.modal-title{font-size:16px;font-weight:800;margin-bottom:16px;padding-left:46px;color:var(--t1);line-height:1.4}
-.dg{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.dc{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.04);border-radius:9px;padding:10px 12px}
-.dc-lbl{font-size:11px;color:var(--t2);margin-bottom:3px}
-.dc-val{font-size:13.5px;font-weight:700;color:var(--t1)}
-.dc-val.cy{color:var(--cyan)}.dc-val.am{color:var(--amber)}.dc-val.rd{color:var(--red)}.dc-val.gn{color:var(--green)}
-.notes-box{grid-column:1/-1;background:rgba(6,182,212,.04);border:1px solid rgba(6,182,212,.12);border-radius:9px;padding:11px 13px}
-.notes-box .dc-lbl{color:var(--cyan);margin-bottom:5px}
-.notes-box .dc-val{font-size:13px;font-weight:500;color:var(--t2);line-height:1.6}
+/* MONO numbers */
+.mono { font-family: var(--mono); font-weight: 600; font-size: 12px; }
 
-/* ═══════════════════════ ANIM ═══════════════════════ */
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-.kpi{animation:fadeUp .35s ease both}
-.kpi:nth-child(1){animation-delay:.03s}.kpi:nth-child(2){animation-delay:.06s}
-.kpi:nth-child(3){animation-delay:.09s}.kpi:nth-child(4){animation-delay:.12s}
-.kpi:nth-child(5){animation-delay:.15s}.kpi:nth-child(6){animation-delay:.18s}
+/* ══════════════════════════════════════
+   PAGINATION
+══════════════════════════════════════ */
+.pager {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 11px; flex-wrap: wrap; gap: 8px;
+}
+.pg-info { font-size: 11.5px; color: var(--t2); }
+.pg-btns { display: flex; gap: 4px; }
+.pg-btn {
+  width: 28px; height: 28px; border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent; color: var(--t2); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11.5px; transition: all .13s;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+.pg-btn:hover { background: var(--blue-lo); color: var(--blue); border-color: var(--blue); }
+.pg-btn.active { background: var(--blue); color: #fff; border-color: var(--blue); font-weight: 700; }
+.pg-btn:disabled { opacity: .3; cursor: not-allowed; }
 
-/* ═══════════════════════ RESPONSIVE ═══════════════════════ */
-@media(max-width:1200px){.kpi-row{grid-template-columns:repeat(3,1fr)}.main-grid{grid-template-columns:1fr}.chart-trio{grid-template-columns:1fr 1fr}}
-@media(max-width:700px){.kpi-row{grid-template-columns:repeat(2,1fr)}.chart-trio{grid-template-columns:1fr}.hd-actions .btn span{display:none}}
+/* ══════════════════════════════════════
+   MODAL
+══════════════════════════════════════ */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(5,11,20,.85);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  display: none; align-items: center; justify-content: center; padding: 20px;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--surface2);
+  border: 1px solid var(--borderHi);
+  border-radius: 16px; padding: 22px;
+  width: min(640px, 96vw); max-height: 90vh; overflow-y: auto;
+  position: relative;
+  animation: popIn .22s cubic-bezier(.34,1.56,.64,1);
+  box-shadow: 0 20px 60px rgba(0,0,0,.5);
+}
+@keyframes popIn { from { opacity:0; transform:scale(.93) translateY(10px); } to { opacity:1; transform:none; } }
+.modal-close {
+  position: absolute; top: 14px; left: 16px;
+  background: var(--rose-lo); border: 1px solid rgba(244,63,94,.18);
+  color: var(--rose); border-radius: 7px; padding: 4px 10px;
+  cursor: pointer; font-family: inherit; font-size: 12px; font-weight: 600;
+  transition: all .15s;
+}
+.modal-close:hover { background: var(--rose); color: #fff; }
+.modal-header { font-size: 15px; font-weight: 700; margin-bottom: 18px; padding-left: 46px; line-height: 1.4; }
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mc {
+  background: rgba(255,255,255,.02);
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 9px; padding: 10px 12px;
+}
+.mc-lbl { font-size: 10.5px; color: var(--t2); margin-bottom: 3px; }
+.mc-val { font-size: 13px; font-weight: 600; color: var(--t1); }
+.mc-val.blue  { color: var(--blue); }
+.mc-val.teal  { color: var(--teal); }
+.mc-val.amber { color: var(--amber); }
+.mc-val.rose  { color: var(--rose); }
+.mc-val.emer  { color: var(--emerald); }
+.mc-notes {
+  grid-column: 1 / -1;
+  background: rgba(59,130,246,.04); border: 1px solid rgba(59,130,246,.1);
+}
+.mc-notes .mc-lbl { color: var(--blue); }
+.mc-notes .mc-val { font-size: 12.5px; font-weight: 400; color: var(--t2); line-height: 1.6; }
+
+/* ══════════════════════════════════════
+   ANIMATIONS
+══════════════════════════════════════ */
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+.kpi { animation: fadeUp .4s ease both; }
+.kpi:nth-child(1){animation-delay:.04s} .kpi:nth-child(2){animation-delay:.08s}
+.kpi:nth-child(3){animation-delay:.12s} .kpi:nth-child(4){animation-delay:.16s}
+.kpi:nth-child(5){animation-delay:.20s} .kpi:nth-child(6){animation-delay:.24s}
+
+/* ══════════════════════════════════════
+   DIVIDER
+══════════════════════════════════════ */
+.divider { height: 1px; background: var(--border); margin: 4px 0; }
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@media(max-width:1250px) {
+  .kpi-row { grid-template-columns: repeat(3,1fr); }
+  .main-grid { grid-template-columns: 1fr; }
+  .chart-trio { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width:720px) {
+  .kpi-row { grid-template-columns: repeat(2,1fr); }
+  .chart-trio { grid-template-columns: 1fr; }
+  .hdr-right .btn span { display: none; }
+}
 </style>
 </head>
 <body>
 
-<!-- LOADING SCREEN -->
+<!-- LOADING -->
 <div id="loadScreen">
-  <div class="spinner"></div>
-  <div class="load-label" id="loadLabel">جاري تحميل البيانات من الخادم...</div>
+  <div class="load-brand">نواقص المخزن</div>
+  <div class="load-ring"></div>
+  <div class="load-text" id="loadLabel">جاري جلب البيانات...</div>
 </div>
 
 <!-- DETAIL MODAL -->
 <div class="overlay" id="detailOverlay">
   <div class="modal">
-    <button class="modal-x" id="modalClose">✕ إغلاق</button>
-    <div class="modal-title" id="modalTitle"></div>
-    <div class="dg" id="modalBody"></div>
+    <button class="modal-close" id="modalClose">✕ إغلاق</button>
+    <div class="modal-header" id="modalTitle"></div>
+    <div class="modal-grid" id="modalBody"></div>
   </div>
 </div>
 
-<div class="app" id="app" style="opacity:0;transition:opacity .4s">
+<!-- APP -->
+<div class="app" id="app">
 
-  <!-- ── HEADER ────────────────────────────────────────── -->
-  <header>
-    <div class="hd-brand">
-      <div class="hd-logo">ن</div>
+  <!-- HEADER -->
+  <header class="hdr">
+    <div class="hdr-brand">
+      <div class="hdr-icon">ن</div>
       <div>
-        <div class="hd-title" id="sheetTitle">لوحة تحكم النواقص</div>
-        <div class="hd-sub" id="metaLine">جاري التحميل...</div>
-        <div class="hd-live">محدَّث تلقائياً</div>
+        <div class="hdr-title" id="sheetTitle">لوحة تحكم نواقص المخازن</div>
+        <div class="hdr-meta" id="metaLine">جاري التحميل...</div>
+        <div class="live-chip">محدَّث تلقائياً كل 5 دقائق</div>
       </div>
     </div>
-    <div class="hd-actions">
-      <div id="syncChip"><i class="fa-solid fa-circle-check"></i> <span id="syncTime">--</span></div>
+    <div class="hdr-right">
+      <div class="sync-chip"><i class="fa-solid fa-circle-check"></i> <span id="syncTime">--</span></div>
       <button class="btn" id="refreshBtn"><i class="fa-solid fa-arrows-rotate"></i> <span>تحديث</span></button>
-      <button class="btn" id="exportBtn"><i class="fa-solid fa-file-csv"></i> <span>تصدير CSV</span></button>
-      <button class="btn cta" id="printBtn"><i class="fa-solid fa-print"></i> <span>طباعة</span></button>
+      <button class="btn" id="exportBtn"><i class="fa-solid fa-file-csv"></i> <span>تصدير</span></button>
+      <button class="btn primary" id="printBtn"><i class="fa-solid fa-print"></i> <span>طباعة</span></button>
     </div>
   </header>
 
   <!-- ERROR BANNER -->
-  <div id="errorBanner">
+  <div class="err-banner" id="errorBanner">
     <i class="fa-solid fa-circle-xmark"></i>
     <span id="errorMsg">خطأ في تحميل البيانات</span>
     <button class="btn" id="retryBtn" style="margin-inline-start:auto"><i class="fa-solid fa-rotate-right"></i> إعادة المحاولة</button>
   </div>
 
-  <!-- ── KPIs ──────────────────────────────────────────── -->
+  <!-- KPIs -->
   <div class="kpi-row">
-    <div class="kpi cy">
-      <div class="kpi-glow" style="background:var(--cyan)"></div>
-      <div class="kpi-icon"><i class="fa-solid fa-boxes-stacked"></i></div>
-      <div class="kpi-val" id="kTotal">--</div>
+    <div class="kpi blue">
+      <div class="kpi-glow" style="background:var(--blue)"></div>
+      <div class="kpi-hd">
+        <div class="kpi-badge"><i class="fa-solid fa-boxes-stacked"></i></div>
+      </div>
+      <div class="kpi-val mono" id="kTotal">--</div>
       <div class="kpi-lbl">إجمالي الأصناف</div>
-      <div class="kpi-sub" style="color:var(--t2)">كافة الأصناف في التقرير</div>
     </div>
-    <div class="kpi rd">
-      <div class="kpi-glow" style="background:var(--red)"></div>
-      <div class="kpi-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
-      <div class="kpi-val" id="kOut">--</div>
+    <div class="kpi rose">
+      <div class="kpi-glow" style="background:var(--rose)"></div>
+      <div class="kpi-hd">
+        <div class="kpi-badge"><i class="fa-solid fa-circle-exclamation"></i></div>
+      </div>
+      <div class="kpi-val mono" id="kOut">--</div>
       <div class="kpi-lbl">نفذت من المخزون</div>
-      <div class="kpi-sub" style="color:var(--red)">تحتاج إجراءً فورياً</div>
     </div>
-    <div class="kpi am">
+    <div class="kpi amber">
       <div class="kpi-glow" style="background:var(--amber)"></div>
-      <div class="kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
-      <div class="kpi-val" id="kLow">--</div>
+      <div class="kpi-hd">
+        <div class="kpi-badge"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      </div>
+      <div class="kpi-val mono" id="kLow">--</div>
       <div class="kpi-lbl">على وشك النفاد</div>
-      <div class="kpi-sub" style="color:var(--amber)">رصيد منخفض جداً</div>
     </div>
-    <div class="kpi gn">
-      <div class="kpi-glow" style="background:var(--green)"></div>
-      <div class="kpi-icon"><i class="fa-solid fa-truck-ramp-box"></i></div>
-      <div class="kpi-val" id="kOrdered">--</div>
+    <div class="kpi emer">
+      <div class="kpi-glow" style="background:var(--emerald)"></div>
+      <div class="kpi-hd">
+        <div class="kpi-badge"><i class="fa-solid fa-truck-ramp-box"></i></div>
+      </div>
+      <div class="kpi-val mono" id="kOrdered">--</div>
       <div class="kpi-lbl">طلبات نشطة</div>
-      <div class="kpi-sub" style="color:var(--green)">تم الطلب / التوريد</div>
     </div>
-    <div class="kpi pu">
-      <div class="kpi-glow" style="background:var(--purple)"></div>
-      <div class="kpi-icon"><i class="fa-solid fa-clock-rotate-left"></i></div>
-      <div class="kpi-val" id="kAvgDays">--</div>
+    <div class="kpi vio">
+      <div class="kpi-glow" style="background:var(--violet)"></div>
+      <div class="kpi-hd">
+        <div class="kpi-badge"><i class="fa-solid fa-clock-rotate-left"></i></div>
+      </div>
+      <div class="kpi-val mono" id="kAvgDays">--</div>
       <div class="kpi-lbl">متوسط التوريد (يوم)</div>
-      <div class="kpi-sub" style="color:var(--t2)">من تاريخ الطلب</div>
     </div>
-    <div class="kpi pk">
-      <div class="kpi-glow" style="background:var(--pink)"></div>
-      <div class="kpi-icon"><i class="fa-solid fa-calculator"></i></div>
-      <div class="kpi-val" id="kBalance">--</div>
+    <div class="kpi teal">
+      <div class="kpi-glow" style="background:var(--teal)"></div>
+      <div class="kpi-hd">
+        <div class="kpi-badge"><i class="fa-solid fa-calculator"></i></div>
+      </div>
+      <div class="kpi-val mono" id="kBalance">--</div>
       <div class="kpi-lbl">إجمالي رصيد السيستم</div>
-      <div class="kpi-sub" style="color:var(--t2)" id="kBalanceSub">وحدة مخزون</div>
     </div>
   </div>
 
-  <!-- ── MAIN GRID ──────────────────────────────────────── -->
+  <!-- MAIN GRID -->
   <div class="main-grid">
 
     <!-- LEFT SIDEBAR -->
-    <div style="display:flex;flex-direction:column;gap:13px">
+    <div style="display:flex;flex-direction:column;gap:11px">
 
-      <!-- PIE: categories -->
+      <!-- PIE -->
       <div class="card">
-        <div class="ct"><i class="fa-solid fa-chart-pie"></i> توزيع الأصناف بالتصنيف <span class="ct-sub" id="pieTotal"></span></div>
-        <div id="pieChart" class="ch240"></div>
+        <div class="card-title"><i class="fa-solid fa-chart-pie"></i> التصنيف <span class="ct-badge" id="pieTotal"></span></div>
+        <div id="pieChart" class="ch260"></div>
         <div class="legend" id="pieLegend"></div>
       </div>
 
-      <!-- DONUT: availability -->
+      <!-- DONUT -->
       <div class="card">
-        <div class="ct"><i class="fa-solid fa-circle-half-stroke"></i> حالة التوافر في المعصرة</div>
-        <div id="donutChart" class="ch200"></div>
+        <div class="card-title"><i class="fa-solid fa-circle-half-stroke"></i> التوافر في المعصرة</div>
+        <div id="donutChart" class="ch210"></div>
         <div class="legend" id="donutLegend"></div>
       </div>
 
-      <!-- STATUS progress bars -->
+      <!-- STATUS BARS -->
       <div class="card">
-        <div class="ct"><i class="fa-solid fa-bars-progress"></i> توزيع حالة الطلبات</div>
+        <div class="card-title"><i class="fa-solid fa-bars-progress"></i> حالات الطلبات</div>
         <div class="pb-list" id="statusBars"></div>
       </div>
 
     </div>
 
-    <!-- RIGHT: charts + table -->
+    <!-- RIGHT COLUMN -->
     <div class="right-col">
 
       <!-- CHART TRIO -->
       <div class="chart-trio">
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-wave-square"></i> توزيع مدة التوريد <span class="ct-sub">يوم</span></div>
-          <div id="supplyChart" class="ch200"></div>
+          <div class="card-title"><i class="fa-solid fa-wave-square"></i> توزيع مدة التوريد</div>
+          <div id="supplyChart" class="ch210"></div>
         </div>
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-chart-bar"></i> متوسط التوريد / التصنيف</div>
-          <div id="barChart" class="ch200"></div>
+          <div class="card-title"><i class="fa-solid fa-chart-bar"></i> متوسط التوريد / تصنيف</div>
+          <div id="barChart" class="ch210"></div>
         </div>
         <div class="card">
-          <div class="ct"><i class="fa-solid fa-layer-group"></i> أعلى أصناف بالكمية المطلوبة</div>
-          <div id="topQtyChart" class="ch200"></div>
+          <div class="card-title"><i class="fa-solid fa-layer-group"></i> أعلى الكميات المطلوبة</div>
+          <div id="topQtyChart" class="ch210"></div>
         </div>
       </div>
 
-      <!-- TABLE -->
+      <!-- TABLE CARD -->
       <div class="card" style="padding-bottom:12px">
-        <div class="ct"><i class="fa-solid fa-table-list"></i> جدول النواقص التفصيلي</div>
+        <div class="card-title"><i class="fa-solid fa-table-list"></i> جدول النواقص التفصيلي</div>
 
         <div class="toolbar">
           <div class="toolbar-l">
             <div class="inp-wrap">
-              <i class="icon fa-solid fa-magnifying-glass"></i>
+              <i class="inp-icon fa-solid fa-magnifying-glass"></i>
               <input id="searchInput" class="srch" placeholder="ابحث باسم الصنف..."/>
             </div>
             <div class="inp-wrap">
-              <i class="icon fa-solid fa-filter"></i>
+              <i class="inp-icon fa-solid fa-filter"></i>
               <select id="catFilter" class="flt"><option value="">كل التصنيفات</option></select>
             </div>
             <div class="inp-wrap">
-              <i class="icon fa-solid fa-circle-dot"></i>
+              <i class="inp-icon fa-solid fa-circle-dot"></i>
               <select id="availFilter" class="flt"><option value="">كل التوافر</option></select>
             </div>
             <div class="inp-wrap">
-              <i class="icon fa-solid fa-flag"></i>
-              <select id="statusFilter" class="flt"><option value="">كل حالات الطلب</option></select>
+              <i class="inp-icon fa-solid fa-flag"></i>
+              <select id="statusFilter" class="flt"><option value="">كل الحالات</option></select>
             </div>
           </div>
-          <span class="badge" id="countBadge">0 صنف</span>
+          <span class="count-badge" id="countBadge">0 صنف</span>
         </div>
 
         <div class="tbl-wrap">
           <table>
             <thead>
               <tr>
-                <th data-col="اسم الصنف">اسم الصنف <span class="sa">↕</span></th>
-                <th data-col="التصنيف">التصنيف <span class="sa">↕</span></th>
-                <th data-col="رصيد السيستم">رصيد السيستم <span class="sa">↕</span></th>
-                <th data-col="الكمية المطلوبة">الكمية المطلوبة <span class="sa">↕</span></th>
-                <th data-col="توفر المنتج في المعصرة">التوافر <span class="sa">↕</span></th>
-                <th data-col="مدة التوريد من تاريخ الطلب">مدة التوريد <span class="sa">↕</span></th>
-                <th data-col="حالة الطلب">حالة الطلب <span class="sa">↕</span></th>
-                <th data-col="تاريخ الطلب">تاريخ الطلب <span class="sa">↕</span></th>
-                <th data-col="اخر كمية تم توريدها">آخر توريد <span class="sa">↕</span></th>
-                <th style="cursor:default">تفاصيل</th>
+                <th data-col="اسم الصنف">اسم الصنف <span class="sort-arrow">↕</span></th>
+                <th data-col="التصنيف">التصنيف <span class="sort-arrow">↕</span></th>
+                <th data-col="رصيد السيستم">رصيد السيستم <span class="sort-arrow">↕</span></th>
+                <th data-col="الكمية المطلوبة">الكمية المطلوبة <span class="sort-arrow">↕</span></th>
+                <th data-col="توفر المنتج في المعصرة">التوافر <span class="sort-arrow">↕</span></th>
+                <th data-col="مدة التوريد من تاريخ الطلب">مدة التوريد <span class="sort-arrow">↕</span></th>
+                <th data-col="حالة الطلب">حالة الطلب <span class="sort-arrow">↕</span></th>
+                <th data-col="تاريخ الطلب">تاريخ الطلب <span class="sort-arrow">↕</span></th>
+                <th data-col="اخر كمية تم توريدها">آخر توريد <span class="sort-arrow">↕</span></th>
+                <th style="cursor:default;width:56px">تفاصيل</th>
               </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -493,141 +624,139 @@ tbody tr:last-child td{border-bottom:none}
           <div class="pg-info" id="pgInfo">--</div>
           <div class="pg-btns" id="pgBtns"></div>
         </div>
-      </div><!-- end table card -->
+      </div>
 
-    </div><!-- end right-col -->
-  </div><!-- end main-grid -->
+    </div>
+  </div>
 
 </div><!-- end .app -->
 
 <script>
-/* ════════════════════════════════════════════════════════
-   CONFIG
-════════════════════════════════════════════════════════ */
-const API_URL = "https://script.google.com/macros/s/AKfycbwyrBt0HtUUGB1uObAQKvL0bIewDqcAOR_5AFleAT5OFu5zHUXeGXDiQ1J29Xo3_wAcPQ/exec";
-const PAGE_SIZE = 15;
-const AUTO_REFRESH_MS = 5 * 60 * 1000;
+/* ══════════════════════════════════════
+   CONFIG  ← ضع رابط Apps Script هنا
+══════════════════════════════════════ */
+const API_URL        = "https://script.google.com/macros/s/AKfycbwyrBt0HtUUGB1uObAQKvL0bIewDqcAOR_5AFleAT5OFu5zHUXeGXDiQ1J29Xo3_wAcPQ/exec";
+const PAGE_SIZE      = 15;
+const AUTO_REFRESH   = 5 * 60 * 1000;
 
-/* ════════════════════════════════════════════════════════
-   PALETTE & HELPERS
-════════════════════════════════════════════════════════ */
-const PALETTE = ['#06b6d4','#8b5cf6','#f59e0b','#10b981','#ec4899','#ef4444','#60a5fa','#f97316','#a3e635','#14b8a6'];
-const catColorMap = {};
+/* ══════════════════════════════════════
+   PALETTE & COLOR UTILS
+══════════════════════════════════════ */
+const PAL = ['#3b82f6','#2dd4bf','#a78bfa','#fbbf24','#34d399','#f43f5e','#60a5fa','#f97316','#818cf8','#fb7185'];
+const catMap = {};
+
 function catColor(cat) {
-  if (!catColorMap[cat]) {
-    const idx = Object.keys(catColorMap).length;
-    catColorMap[cat] = PALETTE[idx % PALETTE.length];
-  }
-  return catColorMap[cat];
+  if (!catMap[cat]) catMap[cat] = PAL[Object.keys(catMap).length % PAL.length];
+  return catMap[cat];
 }
 
-function extractNumber(x) {
+function extractNum(x) {
   if (x === null || x === undefined) return NaN;
   if (typeof x === 'number') return x;
-  const s = String(x).replace(/,/g, '.');
-  const m = s.match(/-?\d+(\.\d+)?/);
+  const m = String(x).replace(/,/g, '.').match(/-?\d+(\.\d+)?/);
   return m ? parseFloat(m[0]) : NaN;
 }
-function fmtN(n, decimals = 2) {
+
+function fmt(n, dec = 0) {
   if (n === null || n === undefined || isNaN(n)) return '—';
   const v = +n;
   if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
   if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'K';
-  return +v.toFixed(decimals) + '';
+  return v.toFixed(dec);
 }
+
 function fmtFull(n) {
   if (n === null || n === undefined || isNaN(n)) return '—';
   return Number(n).toLocaleString('ar-EG');
 }
 
-/* availability / status → pill class */
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function availPill(v) {
-  if (!v) return 'p-gr';
-  if (v.includes('نفذ')) return 'p-rd';
-  if (v.includes('وشك')) return 'p-am';
-  if (v.includes('متوفر') || v.includes('موجود')) return 'p-gn';
-  return 'p-gr';
+  if (!v) return 'p-gray';
+  if (v.includes('نفذ'))   return 'p-rose';
+  if (v.includes('وشك'))  return 'p-amber';
+  if (v.includes('متوفر') || v.includes('موجود')) return 'p-emer';
+  return 'p-gray';
 }
+
 function statusPill(v) {
-  if (!v) return 'p-gr';
-  if (v.includes('توريد')) return 'p-gn';
-  if (v.includes('طلب')) return 'p-cy';
-  return 'p-gr';
+  if (!v) return 'p-gray';
+  if (v.includes('توريد')) return 'p-emer';
+  if (v.includes('طلب'))   return 'p-blue';
+  return 'p-gray';
 }
-function balanceColor(n) {
-  if (isNaN(n) || n === 0) return 'var(--red)';
-  if (n < 5) return 'var(--amber)';
+
+function balColor(n) {
+  if (isNaN(n) || n === 0) return 'var(--rose)';
+  if (n < 5)               return 'var(--amber)';
   return 'var(--t1)';
 }
+
 function daysColor(d) {
-  if (!d || isNaN(d)) return 'var(--t2)';
-  if (d > 90) return 'var(--red)';
-  if (d > 45) return 'var(--amber)';
-  return 'var(--green)';
+  if (!d || isNaN(d))  return 'var(--t2)';
+  if (d > 90)          return 'var(--rose)';
+  if (d > 45)          return 'var(--amber)';
+  return 'var(--emerald)';
 }
 
-/* ════════════════════════════════════════════════════════
-   DOM REFS
-════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
 const $ = id => document.getElementById(id);
-const sheetTitleEl = $('sheetTitle'), metaLineEl = $('metaLine'),
-      syncTimeEl = $('syncTime'), errorBanner = $('errorBanner'),
-      errorMsg = $('errorMsg');
+let allRows = [], filtered = [], rawRows = [];
+let page = 1, sortCol = '', sortDir = 1;
 
-/* ════════════════════════════════════════════════════════
-   CHART INSTANCES
-════════════════════════════════════════════════════════ */
-const pieEc    = echarts.init($('pieChart'),    null, {renderer:'canvas'});
-const donutEc  = echarts.init($('donutChart'),  null, {renderer:'canvas'});
-const supplyEc = echarts.init($('supplyChart'), null, {renderer:'canvas'});
-const barEc    = echarts.init($('barChart'),    null, {renderer:'canvas'});
-const topQtyEc = echarts.init($('topQtyChart'), null, {renderer:'canvas'});
-
+/* ══════════════════════════════════════
+   ECHARTS INIT
+══════════════════════════════════════ */
+const pieEc    = echarts.init($('pieChart'),    null, { renderer: 'canvas' });
+const donutEc  = echarts.init($('donutChart'),  null, { renderer: 'canvas' });
+const supplyEc = echarts.init($('supplyChart'), null, { renderer: 'canvas' });
+const barEc    = echarts.init($('barChart'),    null, { renderer: 'canvas' });
+const topQtyEc = echarts.init($('topQtyChart'), null, { renderer: 'canvas' });
 const allCharts = [pieEc, donutEc, supplyEc, barEc, topQtyEc];
 window.addEventListener('resize', () => allCharts.forEach(c => c.resize()));
 
-const TT = { backgroundColor:'#0c1b2e', borderColor:'rgba(6,182,212,.22)', textStyle:{color:'#c8dff0', fontFamily:'Tajawal'} };
+const TT = {
+  backgroundColor: '#0d1d35',
+  borderColor: 'rgba(59,130,246,.2)',
+  textStyle: { color: '#c8dff0', fontFamily: 'IBM Plex Sans Arabic', fontSize: 12 }
+};
 
-/* ════════════════════════════════════════════════════════
-   STATE
-════════════════════════════════════════════════════════ */
-let allRows = [], rawRows = [];
-let filtered = [], page = 1;
-let sortCol = '', sortDir = 1;
-
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    LOAD DATA
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 async function loadData(showLoad = false) {
   if (showLoad) {
     $('loadScreen').classList.remove('hide');
-    $('loadLabel').textContent = 'جاري تحميل البيانات من الخادم...';
+    $('loadLabel').textContent = 'جاري جلب البيانات...';
   }
   $('refreshBtn').disabled = true;
   $('refreshBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>جارٍ...</span>';
-  errorBanner.classList.remove('show');
+  $('errorBanner').classList.remove('show');
 
   try {
     const resp = await fetch(API_URL, { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const json = await resp.json();
 
-    sheetTitleEl.textContent = json.sheetName || 'لوحة النواقص';
-    syncTimeEl.textContent = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    $('sheetTitle').textContent = json.sheetName || 'نواقص المخازن';
+    $('syncTime').textContent   = new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
 
     rawRows = Array.isArray(json.rows) ? json.rows : [];
 
-    // normalise
-    allRows = rawRows.map(r => {
-      const p = { ...r };
-      p._balance  = extractNumber(r['رصيد السيستم']);
-      p._reqNum   = extractNumber(r['الكمية المطلوبة']);
-      p._days     = (() => { const v = extractNumber(r['مدة التوريد من تاريخ الطلب']); return isNaN(v) ? null : v; })();
-      p._lastSup  = extractNumber(r['اخر كمية تم توريدها']);
-      return p;
-    });
+    allRows = rawRows.map(r => ({
+      ...r,
+      _balance : extractNum(r['رصيد السيستم']),
+      _reqNum  : extractNum(r['الكمية المطلوبة']),
+      _days    : (() => { const v = extractNum(r['مدة التوريد من تاريخ الطلب']); return isNaN(v) ? null : v; })(),
+      _lastSup : extractNum(r['اخر كمية تم توريدها'])
+    }));
 
-    metaLineEl.textContent = `${allRows.length} صنف · آخر تحديث ${new Date(json.generatedAt || Date.now()).toLocaleString('ar-EG', { dateStyle:'medium', timeStyle:'short' })}`;
+    $('metaLine').textContent = `${allRows.length} صنف · آخر تحديث ${new Date(json.generatedAt || Date.now()).toLocaleString('ar-EG', { dateStyle: 'medium', timeStyle: 'short' })}`;
 
     buildKPIs();
     buildCharts();
@@ -635,33 +764,28 @@ async function loadData(showLoad = false) {
     applyFilter();
 
     window.__EXPORT_ROWS = rawRows;
-
-    // fade in app
-    $('app').style.opacity = '1';
+    $('app').classList.add('visible');
     $('loadScreen').classList.add('hide');
 
   } catch (err) {
     console.error(err);
-    errorMsg.textContent = 'تعذّر الاتصال بالخادم: ' + (err.message || err);
-    errorBanner.classList.add('show');
+    $('errorMsg').textContent = 'تعذّر الاتصال بالخادم: ' + (err.message || err);
+    $('errorBanner').classList.add('show');
     $('loadScreen').classList.add('hide');
-    $('app').style.opacity = '1';
+    $('app').classList.add('visible');
   } finally {
     $('refreshBtn').disabled = false;
     $('refreshBtn').innerHTML = '<i class="fa-solid fa-arrows-rotate"></i> <span>تحديث</span>';
   }
 }
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    KPIs
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 function buildKPIs() {
   const outStock  = allRows.filter(r => r._balance === 0 || (r['توفر المنتج في المعصرة'] || '').includes('نفذ')).length;
   const lowStock  = allRows.filter(r => (r['توفر المنتج في المعصرة'] || '').includes('وشك')).length;
-  const ordered   = allRows.filter(r => {
-    const s = r['حالة الطلب'] || '';
-    return s.includes('طلب') || s.includes('توريد');
-  }).length;
+  const ordered   = allRows.filter(r => { const s = r['حالة الطلب'] || ''; return s.includes('طلب') || s.includes('توريد'); }).length;
   const validDays = allRows.map(r => r._days).filter(d => d !== null && !isNaN(d) && d > 0);
   const avgDays   = validDays.length ? Math.round(validDays.reduce((a, b) => a + b, 0) / validDays.length) : 0;
   const sumBal    = allRows.reduce((s, r) => s + (isNaN(r._balance) ? 0 : r._balance), 0);
@@ -671,32 +795,29 @@ function buildKPIs() {
   $('kLow').textContent     = lowStock;
   $('kOrdered').textContent = ordered;
   $('kAvgDays').textContent = avgDays;
-  $('kBalance').textContent = fmtN(sumBal, 0);
-  $('kBalanceSub').textContent = 'مجموع: ' + fmtFull(Math.round(sumBal));
-  $('pieTotal').textContent  = allRows.length + ' صنف';
+  $('kBalance').textContent = fmt(sumBal, 0);
+  $('pieTotal').textContent = allRows.length + ' صنف';
 }
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    CHARTS
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 function buildCharts() {
-  /* ── PIE ── */
+  /* PIE — categories */
   const byCat = {};
-  allRows.forEach(r => {
-    const c = r['التصنيف'] || 'غير محدد';
-    byCat[c] = (byCat[c] || 0) + 1;
-  });
-  const pieData = Object.entries(byCat).map(([n, v]) => ({ name: n, value: v }));
+  allRows.forEach(r => { const c = r['التصنيف'] || 'غير محدد'; byCat[c] = (byCat[c] || 0) + 1; });
+  const pieData   = Object.entries(byCat).map(([n, v]) => ({ name: n, value: v }));
   const pieColors = pieData.map(d => catColor(d.name));
+
   pieEc.setOption({
     backgroundColor: 'transparent',
     tooltip: { ...TT, trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     series: [{
-      type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'],
+      type: 'pie', radius: ['42%', '72%'], center: ['50%', '48%'],
       avoidLabelOverlap: true,
-      label: { show: true, formatter: '{b}\n{c}', color: '#7a97b0', fontSize: 10.5 },
-      labelLine: { lineStyle: { color: 'rgba(255,255,255,.12)' } },
-      emphasis: { itemStyle: { shadowBlur: 20, shadowColor: 'rgba(0,0,0,.5)' } },
+      label: { show: true, formatter: '{b}\n{c}', color: '#6b8ab5', fontSize: 10 },
+      labelLine: { lineStyle: { color: 'rgba(255,255,255,.1)' } },
+      emphasis: { itemStyle: { shadowBlur: 18, shadowColor: 'rgba(0,0,0,.4)' } },
       data: pieData, color: pieColors
     }]
   });
@@ -704,35 +825,24 @@ function buildCharts() {
   pieLeg.innerHTML = '';
   pieData.forEach((d, i) => {
     const el = document.createElement('div');
-    el.className = 'leg-item';
-    el.innerHTML = `<span class="leg-dot" style="background:${pieColors[i]}"></span>${d.name} <span style="color:var(--t1);font-weight:700;margin-right:3px">(${d.value})</span>`;
+    el.className = 'leg-i';
+    el.innerHTML = `<span class="leg-dot" style="background:${pieColors[i]}"></span>${esc(d.name)} <strong style="color:var(--t1);margin-right:2px">(${d.value})</strong>`;
     pieLeg.appendChild(el);
   });
 
-  /* ── DONUT (availability) ── */
+  /* DONUT — availability */
   const byAvail = {};
-  allRows.forEach(r => {
-    const a = r['توفر المنتج في المعصرة'] || 'غير محدد';
-    byAvail[a] = (byAvail[a] || 0) + 1;
-  });
-  const availColorMap = {};
-  const assignAvailColor = k => {
-    if (k.includes('نفذ')) return '#ef4444';
-    if (k.includes('وشك')) return '#f59e0b';
-    if (k.includes('متوفر') || k.includes('موجود')) return '#10b981';
-    return '#8b5cf6';
-  };
-  const donutData = Object.entries(byAvail).map(([k, v]) => {
-    availColorMap[k] = assignAvailColor(k);
-    return { name: k, value: v, itemStyle: { color: assignAvailColor(k) } };
-  });
+  allRows.forEach(r => { const a = r['توفر المنتج في المعصرة'] || 'غير محدد'; byAvail[a] = (byAvail[a] || 0) + 1; });
+  const availColor = k => k.includes('نفذ') ? '#f43f5e' : k.includes('وشك') ? '#fbbf24' : (k.includes('متوفر') || k.includes('موجود')) ? '#34d399' : '#a78bfa';
+  const donutData = Object.entries(byAvail).map(([k, v]) => ({ name: k, value: v, itemStyle: { color: availColor(k) } }));
+
   donutEc.setOption({
     backgroundColor: 'transparent',
     tooltip: { ...TT, trigger: 'item', formatter: '{b}: {c} ({d}%)' },
     series: [{
-      type: 'pie', radius: ['48%', '74%'], center: ['50%', '50%'],
+      type: 'pie', radius: ['50%', '76%'], center: ['50%', '50%'],
       label: { show: false },
-      emphasis: { itemStyle: { shadowBlur: 18 } },
+      emphasis: { itemStyle: { shadowBlur: 16 } },
       data: donutData
     }]
   });
@@ -740,109 +850,99 @@ function buildCharts() {
   donutLeg.innerHTML = '';
   donutData.forEach(d => {
     const el = document.createElement('div');
-    el.className = 'leg-item';
-    el.innerHTML = `<span class="leg-dot" style="background:${d.itemStyle.color}"></span>${d.name} <span style="color:var(--t1);font-weight:700;margin-right:3px">(${d.value})</span>`;
+    el.className = 'leg-i';
+    el.innerHTML = `<span class="leg-dot" style="background:${d.itemStyle.color}"></span>${esc(d.name)} <strong style="color:var(--t1);margin-right:2px">(${d.value})</strong>`;
     donutLeg.appendChild(el);
   });
 
-  /* ── STATUS BARS ── */
+  /* STATUS BARS */
   const byStatus = {};
-  allRows.forEach(r => {
-    const s = r['حالة الطلب'] || 'غير محدد';
-    byStatus[s] = (byStatus[s] || 0) + 1;
-  });
-  const maxSt = Math.max(...Object.values(byStatus));
-  const stColors = { 'تم الطلب': '#06b6d4', 'تم التوريد': '#10b981' };
-  $('statusBars').innerHTML = Object.entries(byStatus).sort((a, b) => b[1] - a[1]).map(([k, v]) => {
-    const c = stColors[k] || '#8b5cf6';
-    return `<div class="pb-row">
-      <div class="pb-head"><span class="pb-name">${k}</span><span class="pb-count">${v}</span></div>
-      <div class="pb-track"><div class="pb-fill" style="width:${(v/maxSt*100).toFixed(1)}%;background:${c}"></div></div>
-    </div>`;
-  }).join('');
+  allRows.forEach(r => { const s = r['حالة الطلب'] || 'غير محدد'; byStatus[s] = (byStatus[s] || 0) + 1; });
+  const maxSt = Math.max(...Object.values(byStatus), 1);
+  const stColor = k => k.includes('توريد') ? '#34d399' : k.includes('طلب') ? '#3b82f6' : '#a78bfa';
+  $('statusBars').innerHTML = Object.entries(byStatus).sort((a,b)=>b[1]-a[1]).map(([k, v]) =>
+    `<div>
+      <div class="pb-hd"><span class="pb-name">${esc(k)}</span><span class="pb-count">${v}</span></div>
+      <div class="pb-track"><div class="pb-fill" style="width:${(v/maxSt*100).toFixed(1)}%;background:${stColor(k)}"></div></div>
+    </div>`
+  ).join('');
 
-  /* ── SUPPLY DAYS histogram ── */
+  /* SUPPLY DAYS histogram */
   const validDays = allRows.map(r => r._days).filter(d => d !== null && !isNaN(d) && d >= 0);
   if (validDays.length) {
     const maxD = Math.max(...validDays);
-    const W = Math.max(5, Math.ceil((maxD + 1) / 8));
+    const W    = Math.max(5, Math.ceil((maxD + 1) / 8));
     const bCnt = Math.ceil((maxD + 1) / W);
-    const buckets = Array.from({ length: bCnt }, (_, i) => ({ l: i * W, h: (i + 1) * W - 1, c: 0 }));
-    validDays.forEach(v => { const idx = Math.min(bCnt - 1, Math.floor(v / W)); buckets[idx].c++; });
+    const buckets = Array.from({ length: bCnt }, (_, i) => ({ l: i*W, h: (i+1)*W-1, c: 0 }));
+    validDays.forEach(v => { buckets[Math.min(bCnt-1, Math.floor(v/W))].c++; });
     supplyEc.setOption({
       backgroundColor: 'transparent',
       tooltip: { ...TT, trigger: 'axis', formatter: p => `${p[0].axisValueLabel}: ${p[0].data} صنف` },
-      xAxis: { type: 'category', data: buckets.map(b => `${b.l}-${b.h}`), axisLabel: { color: '#4a6880', fontSize: 10 }, boundaryGap: false, axisLine: { lineStyle: { color: '#1a3050' } } },
-      yAxis: { type: 'value', axisLabel: { color: '#4a6880', fontSize: 10 }, splitLine: { lineStyle: { color: 'rgba(255,255,255,.04)' } } },
-      grid: { left: 24, right: 10, top: 12, bottom: 28 },
+      xAxis: { type: 'category', data: buckets.map(b=>`${b.l}-${b.h}`), axisLabel:{color:'#2e4a6b',fontSize:9}, boundaryGap:false, axisLine:{lineStyle:{color:'#1a3050'}} },
+      yAxis: { type: 'value', axisLabel:{color:'#2e4a6b',fontSize:9}, splitLine:{lineStyle:{color:'rgba(255,255,255,.03)'}} },
+      grid: { left:24, right:10, top:12, bottom:28 },
       series: [{
-        type: 'line', smooth: true, data: buckets.map(b => b.c),
-        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(139,92,246,.32)' }, { offset: 1, color: 'rgba(6,182,212,.02)' }]) },
-        lineStyle: { width: 3, color: '#8b5cf6' },
-        symbolSize: 7, itemStyle: { color: '#8b5cf6' }
+        type: 'line', smooth: true, data: buckets.map(b=>b.c),
+        areaStyle:{ color: new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(167,139,250,.3)'},{offset:1,color:'rgba(59,130,246,.02)'}]) },
+        lineStyle:{ width:2.5, color:'#a78bfa' },
+        symbolSize:6, itemStyle:{ color:'#a78bfa' }
       }]
     });
   }
 
-  /* ── BAR: avg lead-time per category ── */
-  const sumDays = {}, cntDays = {};
+  /* BAR — avg days per category */
+  const sumD = {}, cntD = {};
   allRows.forEach(r => {
     if (r._days !== null && !isNaN(r._days) && r._days > 0) {
       const c = r['التصنيف'] || 'غير محدد';
-      sumDays[c] = (sumDays[c] || 0) + r._days;
-      cntDays[c] = (cntDays[c] || 0) + 1;
+      sumD[c] = (sumD[c]||0) + r._days;
+      cntD[c] = (cntD[c]||0) + 1;
     }
   });
-  const barData = Object.keys(sumDays).map(c => ({ cat: c, avg: Math.round(sumDays[c] / cntDays[c]) })).sort((a, b) => b.avg - a.avg);
+  const barData = Object.keys(sumD).map(c=>({cat:c, avg:Math.round(sumD[c]/cntD[c])})).sort((a,b)=>b.avg-a.avg);
   barEc.setOption({
     backgroundColor: 'transparent',
-    tooltip: { ...TT, trigger: 'axis', formatter: p => `${barData[p[0].dataIndex]?.cat}: ${p[0].data} يوم` },
-    xAxis: { type: 'value', axisLabel: { color: '#4a6880', fontSize: 10 }, splitLine: { lineStyle: { color: 'rgba(255,255,255,.04)' } } },
-    yAxis: { type: 'category', data: barData.map(d => d.cat), axisLabel: { color: '#4a6880', fontSize: 10, width: 80, overflow: 'truncate' }, inverse: false },
-    grid: { left: 90, right: 30, top: 8, bottom: 8 },
+    tooltip: { ...TT, trigger:'axis', formatter: p=>`${barData[p[0].dataIndex]?.cat}: ${p[0].data} يوم` },
+    xAxis: { type:'value', axisLabel:{color:'#2e4a6b',fontSize:9}, splitLine:{lineStyle:{color:'rgba(255,255,255,.03)'}} },
+    yAxis: { type:'category', data:barData.map(d=>d.cat), axisLabel:{color:'#2e4a6b',fontSize:9,width:75,overflow:'truncate'}, inverse:false },
+    grid: { left:85, right:30, top:8, bottom:8 },
     series: [{
-      type: 'bar',
-      data: barData.map((d, i) => ({
-        value: d.avg,
-        itemStyle: { color: i === 0 ? '#ef4444' : catColor(d.cat), borderRadius: [0, 5, 5, 0] }
-      })),
-      barMaxWidth: 16,
-      label: { show: true, position: 'right', color: '#7a97b0', fontSize: 10 }
+      type:'bar',
+      data: barData.map((d,i)=>({value:d.avg, itemStyle:{color:i===0?'#f43f5e':catColor(d.cat),borderRadius:[0,4,4,0]}})),
+      barMaxWidth:14,
+      label:{ show:true, position:'right', color:'#6b8ab5', fontSize:9.5 }
     }]
   });
 
-  /* ── TOP QTY horizontal bar ── */
-  const sorted = [...allRows].sort((a, b) => b._reqNum - a._reqNum).slice(0, 8);
+  /* TOP QTY */
+  const topItems = [...allRows].sort((a,b)=>b._reqNum-a._reqNum).slice(0,8);
   topQtyEc.setOption({
     backgroundColor: 'transparent',
-    tooltip: { ...TT, trigger: 'axis', formatter: p => `${sorted[p[0].dataIndex]?.['اسم الصنف']?.slice(0,30)}: ${fmtFull(p[0].data)}` },
-    xAxis: { type: 'value', axisLabel: { color: '#4a6880', fontSize: 10 }, splitLine: { lineStyle: { color: 'rgba(255,255,255,.04)' } } },
+    tooltip: { ...TT, trigger:'axis', formatter: p=>`${topItems[p[0].dataIndex]?.['اسم الصنف']?.slice(0,28)}: ${fmtFull(p[0].data)}` },
+    xAxis: { type:'value', axisLabel:{color:'#2e4a6b',fontSize:9}, splitLine:{lineStyle:{color:'rgba(255,255,255,.03)'}} },
     yAxis: {
-      type: 'category',
-      data: sorted.map(r => (r['اسم الصنف'] || '').slice(0, 18) + ((r['اسم الصنف'] || '').length > 18 ? '…' : '')),
-      axisLabel: { color: '#4a6880', fontSize: 9.5, width: 100, overflow: 'truncate' },
-      inverse: true
+      type:'category',
+      data: topItems.map(r=>(r['اسم الصنف']||'').slice(0,16)+((r['اسم الصنف']||'').length>16?'…':'')),
+      axisLabel:{color:'#2e4a6b',fontSize:9,width:95,overflow:'truncate'},
+      inverse:true
     },
-    grid: { left: 112, right: 30, top: 8, bottom: 8 },
+    grid: { left:105, right:32, top:8, bottom:8 },
     series: [{
-      type: 'bar',
-      data: sorted.map((r, i) => ({
-        value: r._reqNum,
-        itemStyle: { color: PALETTE[i % PALETTE.length], borderRadius: [0, 5, 5, 0] }
-      })),
-      barMaxWidth: 16,
-      label: { show: true, position: 'right', color: '#7a97b0', fontSize: 10, formatter: p => fmtN(p.value, 0) }
+      type:'bar',
+      data: topItems.map((r,i)=>({value:r._reqNum, itemStyle:{color:PAL[i%PAL.length],borderRadius:[0,4,4,0]}})),
+      barMaxWidth:14,
+      label:{show:true, position:'right', color:'#6b8ab5', fontSize:9.5, formatter:p=>fmt(p.value,0)}
     }]
   });
 }
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    FILTERS
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 function buildFilters() {
-  const cats    = [...new Set(allRows.map(r => r['التصنيف'] || '').filter(Boolean))].sort();
-  const avails  = [...new Set(allRows.map(r => r['توفر المنتج في المعصرة'] || '').filter(Boolean))].sort();
-  const statuses= [...new Set(allRows.map(r => r['حالة الطلب'] || '').filter(Boolean))].sort();
+  const cats    = [...new Set(allRows.map(r => r['التصنيف']||'').filter(Boolean))].sort();
+  const avails  = [...new Set(allRows.map(r => r['توفر المنتج في المعصرة']||'').filter(Boolean))].sort();
+  const statuses= [...new Set(allRows.map(r => r['حالة الطلب']||'').filter(Boolean))].sort();
 
   const fill = (id, arr) => {
     const el = $(id);
@@ -856,9 +956,9 @@ function buildFilters() {
   fill('statusFilter', statuses);
 }
 
-/* ════════════════════════════════════════════════════════
-   FILTER + SORT + PAGINATE
-════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   FILTER + SORT
+══════════════════════════════════════ */
 function applyFilter() {
   const q     = ($('searchInput').value || '').trim().toLowerCase();
   const cat   = $('catFilter').value;
@@ -866,13 +966,13 @@ function applyFilter() {
   const stat  = $('statusFilter').value;
 
   filtered = allRows.filter(r => {
-    if (cat   && (r['التصنيف']                    || '') !== cat)   return false;
-    if (avail && (r['توفر المنتج في المعصرة']    || '') !== avail) return false;
-    if (stat  && (r['حالة الطلب']                 || '') !== stat)  return false;
+    if (cat   && (r['التصنيف']||'') !== cat)   return false;
+    if (avail && (r['توفر المنتج في المعصرة']||'') !== avail) return false;
+    if (stat  && (r['حالة الطلب']||'') !== stat)  return false;
     if (q) {
-      const name = String(r['اسم الصنف'] || '').toLowerCase();
-      const barcode = String(r['الباركود \\ مرجع داخلي'] || '').toLowerCase();
-      if (!name.includes(q) && !barcode.includes(q)) return false;
+      const name = String(r['اسم الصنف']||'').toLowerCase();
+      const bc   = String(r['الباركود \\ مرجع داخلي']||'').toLowerCase();
+      if (!name.includes(q) && !bc.includes(q)) return false;
     }
     return true;
   });
@@ -880,10 +980,10 @@ function applyFilter() {
   if (sortCol) {
     filtered.sort((a, b) => {
       let av = a[sortCol], bv = b[sortCol];
-      if (sortCol === 'رصيد السيستم')                     { av = a._balance;  bv = b._balance; }
-      if (sortCol === 'مدة التوريد من تاريخ الطلب')      { av = a._days;     bv = b._days; }
-      if (sortCol === 'الكمية المطلوبة')                  { av = a._reqNum;   bv = b._reqNum; }
-      if (sortCol === 'اخر كمية تم توريدها')              { av = a._lastSup;  bv = b._lastSup; }
+      if (sortCol === 'رصيد السيستم')                   { av = a._balance; bv = b._balance; }
+      if (sortCol === 'مدة التوريد من تاريخ الطلب')    { av = a._days;    bv = b._days; }
+      if (sortCol === 'الكمية المطلوبة')                { av = a._reqNum;  bv = b._reqNum; }
+      if (sortCol === 'اخر كمية تم توريدها')            { av = a._lastSup; bv = b._lastSup; }
       if (typeof av === 'string') return av.localeCompare(bv, 'ar') * sortDir;
       return ((av ?? -Infinity) - (bv ?? -Infinity)) * sortDir;
     });
@@ -893,32 +993,32 @@ function applyFilter() {
   renderTable();
 }
 
-/* ════════════════════════════════════════════════════════
-   RENDER TABLE
-════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   TABLE RENDER
+══════════════════════════════════════ */
 function renderTable() {
-  const start = (page - 1) * PAGE_SIZE;
-  const slice = filtered.slice(start, start + PAGE_SIZE);
-  const tbody = $('tableBody');
+  const start  = (page - 1) * PAGE_SIZE;
+  const slice  = filtered.slice(start, start + PAGE_SIZE);
+  const tbody  = $('tableBody');
   tbody.innerHTML = '';
 
   slice.forEach((r, i) => {
     const tr = document.createElement('tr');
-    tr.style.cssText = `animation:fadeUp .22s ease ${i * 0.025}s both`;
+    tr.style.cssText = `animation:fadeUp .2s ease ${i * 0.022}s both`;
     const bal  = r._balance;
     const days = r._days;
     tr.innerHTML = `
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r['اسم الصنف'])}">${esc(r['اسم الصنف'] || '—')}</td>
-      <td><span class="pill p-gr" style="background:${catColor(r['التصنيف'])}22;color:${catColor(r['التصنيف'])}">${esc(r['التصنيف'] || '—')}</span></td>
-      <td><span style="font-weight:700;color:${balanceColor(bal)}">${fmtFull(bal)}</span></td>
-      <td><span style="color:var(--cyan);font-weight:600">${esc(r['الكمية المطلوبة'] || '—')}</span></td>
-      <td><span class="pill ${availPill(r['توفر المنتج في المعصرة'])}">${esc(r['توفر المنتج في المعصرة'] || '—')}</span></td>
-      <td><span style="color:${daysColor(days)};font-weight:700">${days !== null ? days : '—'}</span> يوم</td>
-      <td><span class="pill ${statusPill(r['حالة الطلب'])}">${esc(r['حالة الطلب'] || '—')}</span></td>
-      <td style="color:var(--t2);font-size:12px">${esc(r['تاريخ الطلب'] || '—')}</td>
-      <td style="color:var(--t2)">${fmtFull(r._lastSup)}</td>
+      <td style="max-width:195px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r['اسم الصنف'])}">${esc(r['اسم الصنف']||'—')}</td>
+      <td><span class="pill p-gray" style="background:${catColor(r['التصنيف'])}18;color:${catColor(r['التصنيف'])}">${esc(r['التصنيف']||'—')}</span></td>
+      <td><span class="mono" style="color:${balColor(bal)}">${fmtFull(bal)}</span></td>
+      <td><span class="mono" style="color:var(--blue)">${esc(r['الكمية المطلوبة']||'—')}</span></td>
+      <td><span class="pill ${availPill(r['توفر المنتج في المعصرة'])}">${esc(r['توفر المنتج في المعصرة']||'—')}</span></td>
+      <td><span class="mono" style="color:${daysColor(days)}">${days !== null ? days : '—'}</span> <small style="color:var(--t3)">يوم</small></td>
+      <td><span class="pill ${statusPill(r['حالة الطلب'])}">${esc(r['حالة الطلب']||'—')}</span></td>
+      <td style="color:var(--t2);font-size:11.5px">${esc(r['تاريخ الطلب']||'—')}</td>
+      <td><span class="mono" style="color:var(--t2)">${fmtFull(r._lastSup)}</span></td>
       <td>
-        <button class="btn" style="padding:4px 9px;font-size:11px" onclick="showDetail(${allRows.indexOf(r)})">
+        <button class="btn" style="padding:4px 8px;font-size:11px;min-width:0" onclick="showDetail(${allRows.indexOf(r)})">
           <i class="fa-solid fa-eye"></i>
         </button>
       </td>`;
@@ -929,13 +1029,9 @@ function renderTable() {
   renderPager();
 }
 
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    PAGINATION
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 function renderPager() {
   const total = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   $('pgInfo').textContent = `صفحة ${page} من ${total} · ${filtered.length} صنف`;
@@ -951,99 +1047,97 @@ function renderPager() {
     wrap.appendChild(b);
   };
 
-  add('<i class="fa-solid fa-angles-right"></i>', 1, page === 1, false);
-  add('<i class="fa-solid fa-angle-right"></i>', page - 1, page === 1, false);
-  const lo = Math.max(1, page - 2), hi = Math.min(total, page + 2);
-  for (let i = lo; i <= hi; i++) add(i, i, false, i === page);
-  add('<i class="fa-solid fa-angle-left"></i>', page + 1, page >= total, false);
-  add('<i class="fa-solid fa-angles-left"></i>', total, page >= total, false);
+  add('<i class="fa-solid fa-angles-right"></i>', 1, page===1, false);
+  add('<i class="fa-solid fa-angle-right"></i>',  page-1, page===1, false);
+  const lo = Math.max(1, page-2), hi = Math.min(total, page+2);
+  for (let i = lo; i <= hi; i++) add(i, i, false, i===page);
+  add('<i class="fa-solid fa-angle-left"></i>',  page+1, page>=total, false);
+  add('<i class="fa-solid fa-angles-left"></i>', total,  page>=total, false);
 }
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    SORT
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 document.querySelectorAll('thead th[data-col]').forEach(th => {
   th.addEventListener('click', () => {
     const col = th.dataset.col;
-    if (sortCol === col) sortDir *= -1; else { sortCol = col; sortDir = 1; }
-    document.querySelectorAll('thead th').forEach(t => { t.classList.remove('sorted'); t.querySelector('.sa') && (t.querySelector('.sa').textContent = '↕'); });
+    sortDir = sortCol === col ? sortDir * -1 : 1;
+    sortCol = col;
+    document.querySelectorAll('thead th').forEach(t => { t.classList.remove('sorted'); if (t.querySelector('.sort-arrow')) t.querySelector('.sort-arrow').textContent = '↕'; });
     th.classList.add('sorted');
-    const sa = th.querySelector('.sa');
+    const sa = th.querySelector('.sort-arrow');
     if (sa) sa.textContent = sortDir === 1 ? '↑' : '↓';
     applyFilter();
   });
 });
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    DETAIL MODAL
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 function showDetail(idx) {
   const r = allRows[idx];
   if (!r) return;
   $('modalTitle').textContent = '📦 ' + (r['اسم الصنف'] || '');
-  const bal = r._balance;
+  const bal  = r._balance;
   const days = r._days;
-  const balC = bal === 0 ? 'rd' : bal < 5 ? 'am' : 'gn';
-  const daysC = days > 90 ? 'rd' : days > 45 ? 'am' : 'gn';
+  const balC = bal === 0 ? 'rose' : bal < 5 ? 'amber' : 'emer';
+  const dayC = days > 90 ? 'rose' : days > 45 ? 'amber' : 'emer';
   $('modalBody').innerHTML = `
-    <div class="dc"><div class="dc-lbl">التصنيف</div><div class="dc-val" style="color:${catColor(r['التصنيف'])}">${esc(r['التصنيف'] || '—')}</div></div>
-    <div class="dc"><div class="dc-lbl">الباركود / المرجع</div><div class="dc-val">${esc(r['الباركود \\ مرجع داخلي'] || '—')}</div></div>
-    <div class="dc"><div class="dc-lbl">رصيد السيستم</div><div class="dc-val ${balC}">${fmtFull(bal)}</div></div>
-    <div class="dc"><div class="dc-lbl">الكمية المطلوبة</div><div class="dc-val cy">${esc(r['الكمية المطلوبة'] || '—')}</div></div>
-    <div class="dc"><div class="dc-lbl">توفر في المعصرة</div><div class="dc-val ${r['توفر المنتج في المعصرة']?.includes('نفذ')?'rd':r['توفر المنتج في المعصرة']?.includes('وشك')?'am':'gn'}">${esc(r['توفر المنتج في المعصرة'] || '—')}</div></div>
-    <div class="dc"><div class="dc-lbl">حالة الطلب</div><div class="dc-val ${r['حالة الطلب']?.includes('توريد')?'gn':'cy'}">${esc(r['حالة الطلب'] || '—')}</div></div>
-    <div class="dc"><div class="dc-lbl">مدة التوريد</div><div class="dc-val ${daysC}">${days !== null ? days + ' يوم' : '—'}</div></div>
-    <div class="dc"><div class="dc-lbl">تاريخ الطلب</div><div class="dc-val">${esc(r['تاريخ الطلب'] || '—')}</div></div>
-    <div class="dc"><div class="dc-lbl">آخر كمية توريد</div><div class="dc-val">${fmtFull(r._lastSup)}</div></div>
-    <div class="dc"><div class="dc-lbl">تاريخ آخر توريد</div><div class="dc-val">${esc(r['تاريخ اخر توريدها'] || r['تاريخ آخر توريد'] || '—')}</div></div>
-    <div class="notes-box dc">
-      <div class="dc-lbl"><i class="fa-solid fa-note-sticky"></i> الملاحظات</div>
-      <div class="dc-val">${esc(r['ملاحظات'] || 'لا توجد ملاحظات')}</div>
-    </div>`;
+    <div class="mc"><div class="mc-lbl">التصنيف</div><div class="mc-val" style="color:${catColor(r['التصنيف'])}">${esc(r['التصنيف']||'—')}</div></div>
+    <div class="mc"><div class="mc-lbl">الباركود / المرجع</div><div class="mc-val" style="font-family:var(--mono);font-size:12px">${esc(r['الباركود \\ مرجع داخلي']||'—')}</div></div>
+    <div class="mc"><div class="mc-lbl">رصيد السيستم</div><div class="mc-val ${balC}">${fmtFull(bal)}</div></div>
+    <div class="mc"><div class="mc-lbl">الكمية المطلوبة</div><div class="mc-val blue">${esc(r['الكمية المطلوبة']||'—')}</div></div>
+    <div class="mc"><div class="mc-lbl">التوافر في المعصرة</div><div class="mc-val ${r['توفر المنتج في المعصرة']?.includes('نفذ')?'rose':r['توفر المنتج في المعصرة']?.includes('وشك')?'amber':'emer'}">${esc(r['توفر المنتج في المعصرة']||'—')}</div></div>
+    <div class="mc"><div class="mc-lbl">حالة الطلب</div><div class="mc-val ${r['حالة الطلب']?.includes('توريد')?'emer':'blue'}">${esc(r['حالة الطلب']||'—')}</div></div>
+    <div class="mc"><div class="mc-lbl">مدة التوريد</div><div class="mc-val ${dayC}">${days !== null ? days + ' يوم' : '—'}</div></div>
+    <div class="mc"><div class="mc-lbl">تاريخ الطلب</div><div class="mc-val">${esc(r['تاريخ الطلب']||'—')}</div></div>
+    <div class="mc"><div class="mc-lbl">آخر كمية توريد</div><div class="mc-val">${fmtFull(r._lastSup)}</div></div>
+    <div class="mc"><div class="mc-lbl">تاريخ آخر توريد</div><div class="mc-val">${esc(r['تاريخ اخر توريدها']||r['تاريخ آخر توريد']||'—')}</div></div>
+    <div class="mc mc-notes"><div class="mc-lbl"><i class="fa-solid fa-note-sticky"></i> الملاحظات</div><div class="mc-val">${esc(r['ملاحظات']||'لا توجد ملاحظات')}</div></div>`;
   $('detailOverlay').classList.add('open');
 }
 window.showDetail = showDetail;
 $('modalClose').addEventListener('click', () => $('detailOverlay').classList.remove('open'));
 $('detailOverlay').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove('open'); });
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    FILTER EVENTS
-════════════════════════════════════════════════════════ */
-['searchInput', 'catFilter', 'availFilter', 'statusFilter'].forEach(id => {
+══════════════════════════════════════ */
+['searchInput','catFilter','availFilter','statusFilter'].forEach(id => {
   const el = $(id);
-  el.addEventListener('input', applyFilter);
+  el.addEventListener('input',  applyFilter);
   el.addEventListener('change', applyFilter);
 });
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    EXPORT CSV
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 $('exportBtn').addEventListener('click', () => {
   const rows = window.__EXPORT_ROWS || [];
-  if (!rows.length) return alert('لا توجد بيانات للتصدير بعد');
+  if (!rows.length) return alert('لا توجد بيانات للتصدير');
   const headers = Object.keys(rows[0]);
   const csv = [
     '\uFEFF' + headers.join(','),
-    ...rows.map(r => headers.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))
+    ...rows.map(r => headers.map(h => `"${String(r[h]??'').replace(/"/g,'""')}"`).join(','))
   ].join('\n');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-  a.download = `نواقص_المخازن_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `نواقص_المخازن_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 });
 
-/* ════════════════════════════════════════════════════════
-   REFRESH / RETRY / PRINT
-════════════════════════════════════════════════════════ */
+/* ══════════════════════════════════════
+   CONTROLS
+══════════════════════════════════════ */
 $('refreshBtn').addEventListener('click', () => loadData(false));
 $('retryBtn').addEventListener('click',   () => loadData(true));
 $('printBtn').addEventListener('click',   () => window.print());
 
-/* ════════════════════════════════════════════════════════
+/* ══════════════════════════════════════
    INIT
-════════════════════════════════════════════════════════ */
+══════════════════════════════════════ */
 loadData(true);
-setInterval(() => loadData(false), AUTO_REFRESH_MS);
+setInterval(() => loadData(false), AUTO_REFRESH);
 </script>
 </body>
 </html>
